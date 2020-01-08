@@ -52,7 +52,7 @@ def get_data_by_country(part_data,country_url_list, land_id, ip_list):
     all_countries = part_data
 
     for country in country_url_list.keys():
-        #判断是否已有该国家数据
+
         index = -1
         for i in range(len(all_countries)):
             if all_countries[i]['Country']==country:
@@ -86,11 +86,14 @@ def get_data_by_country(part_data,country_url_list, land_id, ip_list):
         cou['LeagueInfo']['Players'] = profil_table1_bs.find_all('td')[2].string.strip()
         cou['LeagueInfo']['Foreigners'] = profil_table1_bs.find_all('a')[-1].string.split('\xa0')[0]
         cou['LeagueInfo']['ForeignersPercent'] = profil_table1_bs.find_all('span')[-1].string.replace(',', '.')
-        cou['LeagueInfo']['AverageMarketValue'] = profil_table1_bs.find_all('td')[-1].string.strip().replace('€', '')
-        cou['LeagueInfo']['AverageAge'] = BeautifulSoup(str(profil_tables[1]), 'html.parser').find_all('td')[2].contents[0].strip().replace(',','.')
+        cou['LeagueInfo']['AverageMarketValue'] = profil_table1_bs.find_all('td')[-1].string.strip().replace('€', '') if profil_table1_bs.find_all('td')[-1].string is not None else '-'
+        profil_table2_bs = BeautifulSoup(str(profil_tables[1]), 'html.parser')
+        cou['LeagueInfo']['AverageAge'] = profil_table2_bs.find_all('td')[2].contents[0].strip().replace(',','.')
+        if cou['LeagueInfo']['AverageAge'] == '':
+            cou['LeagueInfo']['AverageAge'] = profil_table2_bs.find_all('td')[1].contents[0].strip().replace(',', '.')
         total_div = start_page_bs.find('div',class_='marktwert')
         total_a = BeautifulSoup(str(total_div), 'html.parser').find('a')
-        cou['LeagueInfo']['TotalMarketValue'] = total_a.contents[1]+total_a.contents[2].string
+        cou['LeagueInfo']['TotalMarketValue'] = total_a.contents[1]+total_a.contents[2].string if total_div is not None else '-'
 
         print('getting foreigners and natives...')
         for season in range(2009, 2019):
@@ -208,7 +211,7 @@ def get_data_by_country(part_data,country_url_list, land_id, ip_list):
 
         all_countries.append(cou)
 
-        #保存数据
+        #save data of this country
         print('one country finished,saving data...')
         json_data = json.dumps(all_countries)
         json_file = open('data_by_country.json', 'w')
@@ -262,15 +265,14 @@ def get_confederation(data,all_country_url,ip_list):
                     data[index]['Points'] = {}
 
                 data[index]['Points'][season] = tds[-1].string
-                print(data[index])
 
-                if count >= 66:
+                if count >= len(data):
                     break
-            if count >= 66:
+            if count >= len(data):
                 break
 
-        if count<66:
-            print('以下国家该赛季不在表单中：')
+        if count<len(data):
+            print('above countries not in the list of this season:')
             for t in data:
                 if 'Confederation' not in t.keys():
                     print(t['Country'])
@@ -434,7 +436,7 @@ all_country_url = {2009:'https://www.transfermarkt.com/statistik/weltrangliste/s
                    2018:'https://www.transfermarkt.com/statistik/weltrangliste/statistik/stat/datum/2018-09-20/plus/0'
                    }
 
-#读取已经爬到的部分数据
+#read data already got
 if os.path.exists('data_by_country.json'):
     f = open('data_by_country.json', 'r')
     data = json.load(f)
@@ -450,4 +452,5 @@ json_data = json.dumps(data)
 json_file = open('data_by_country.json', 'w')
 json_file.write(json_data)
 json_file.close()
+
 
